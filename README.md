@@ -1,0 +1,3 @@
+Backend of https://github.com/treebornfrog/00-frontend-starting-setup
+
+See readme of the frontend
