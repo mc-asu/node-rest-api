@@ -14,7 +14,9 @@ const error500 = (err, next) => {
 const success = (res, statusCode, message, result, name) => {
     const statusJson = {}
     statusJson.message = message
-    statusJson[name] = result
+    if(name && result) {
+        statusJson[name] = result
+    } 
     res.status(statusCode).json(statusJson)
 }
 
