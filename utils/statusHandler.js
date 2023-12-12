@@ -11,13 +11,8 @@ const error500 = (err, next) => {
     next(err)
 }
 
-const success = (res, statusCode, message, result, name) => {
-    const statusJson = {}
-    statusJson.message = message
-    if(name && result) {
-        statusJson[name] = result
-    } 
-    res.status(statusCode).json(statusJson)
+const success = (res, statusCode, jsonObject) => {
+    res.status(statusCode).json(jsonObject)
 }
 
 exports.error = error

@@ -4,13 +4,28 @@ const fs = require('fs')
 const path = require('path')
 
 const Post = require('../models/post')
+const PER_PAGE = 2
 
 exports.getPosts = (req, res, next) => {
-    Post.find()
-    .then(posts => {
-        statusHandler.success(res, 200, 'Fetched posts successfully.', posts, 'posts')
-    })
-    .catch(err => statusHandler.error500(err, next))
+    const currentPage = req.query.page || 1
+    let totalItems
+    Post
+        .find()
+        .countDocuments()
+        .then(count => { 
+            totalItems = count
+            return Post.find()
+                .skip((currentPage - 1) * PER_PAGE)
+                .limit(PER_PAGE)
+        })
+        .then(posts => {
+            statusHandler.success(res, 200, { 
+                message: 'Fetched posts successfully.', 
+                posts: posts,
+                totalItems: totalItems
+            })
+        })
+        .catch(err => statusHandler.error500(err, next))
 }
 
 exports.createPost = (req, res, next) => {
@@ -34,9 +49,12 @@ exports.createPost = (req, res, next) => {
         },
     })
     post.save()
-    .then(result => {
-        console.log(result)
-        statusHandler.success(res, 201, 'Post created successfully!', result, 'post')
+    .then(post => {
+        console.log(post)
+        statusHandler.success(res, 201, { 
+            message: 'Post created successfully!', 
+            post: post,
+        })
     })
     .catch(err => statusHandler.error500(err, next))
     
@@ -49,7 +67,10 @@ exports.getPost = (req, res, next) => {
             if(!post) {
                 statusHandler.error(404, 'Could not find post.')
             }
-            statusHandler.success(res, 200, 'Post fetched.', post, 'post')
+            statusHandler.success(res, 200, { 
+                message: 'Post fetched!', 
+                post: post,
+            })
         })
         .catch(err => statusHandler.error500(err, next))
 }
@@ -84,8 +105,11 @@ exports.updatePost = (req, res, next) => {
 
             return post.save()
         })
-        .then(result => {
-            statusHandler.success(res, 200, 'Post edited successfully!', result, 'post')
+        .then(post => {
+            statusHandler.success(res, 200, { 
+                message: 'Post edited!', 
+                post: post,
+            })
         })
         .catch(err => statusHandler.error500(err, next))
 }
@@ -103,7 +127,9 @@ exports.deletePost = (req,res,next) => {
             return Post.findByIdAndDelete(postId)
         })
         .then(() => {
-            statusHandler.success(res, 200, 'Post deleted successfully!')
+            statusHandler.success(res, 200, { 
+                message: 'Post deleted!', 
+            })
         })
         .catch(err => statusHandler.error500(err, next))
 }
