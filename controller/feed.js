@@ -4,6 +4,7 @@ const fs = require('fs')
 const path = require('path')
 
 const Post = require('../models/post')
+const User = require('../models/user')
 const PER_PAGE = 2
 
 exports.getPosts = (req, res, next) => {
@@ -30,12 +31,13 @@ exports.getPosts = (req, res, next) => {
 
 exports.createPost = (req, res, next) => {
     const { title, content } = req.body
+    let creator
     if(!req.file) {
         statusHandler.error(422, 'Attached file is not an image')
     }
     const errors = validationResult(req)
     if(!errors.isEmpty()) {
-        statusHandler.error(422, 'Validation failed, entered data is incorrect.')
+        statusHandler.error(422, 'Validation failed, entered data is incorrect.', errors)
     }
 
     const imageUrl = req.file.path
@@ -44,20 +46,29 @@ exports.createPost = (req, res, next) => {
         title: title,
         content: content,
         imageUrl: imageUrl,
-        creator: {
-            name: 'Manuel'
-        },
+        creator: req.userId,
     })
-    post.save()
-    .then(post => {
-        console.log(post)
-        statusHandler.success(res, 201, { 
-            message: 'Post created successfully!', 
-            post: post,
+    post
+        .save()
+        .then(result  => {
+            return User.findById(req.userId)
         })
-    })
-    .catch(err => statusHandler.error500(err, next))
-    
+        .then(user => {
+            creator = user
+            user.posts.push(post)
+            return user.save()
+        })
+        .then(result => {
+            statusHandler.success(res, 201, { 
+                message: 'Post created successfully!', 
+                post: post,
+                creator: {
+                    _id: creator._id,
+                    name: creator.name
+                }
+            })
+        })
+        .catch(err => statusHandler.error500(err, next))
 }
 
 exports.getPost = (req, res, next) => {
@@ -80,7 +91,7 @@ exports.updatePost = (req, res, next) => {
     const errors = validationResult(req)
 
     if(!errors.isEmpty()) {
-        statusHandler.error(422, 'Validation failed, entered data is incorrect.')
+        statusHandler.error(422, 'Validation failed, entered data is incorrect.', errors)
     } 
     const { title, content } = req.body
     let imageUrl = req.body.image
@@ -96,6 +107,11 @@ exports.updatePost = (req, res, next) => {
             if(!post) {
                 statusHandler.error(404, 'Could not find post.')
             }
+
+            if(post.creator.toString() !== req.userId) {
+                statusHandler.error(403, 'Not authorized')
+            }   
+
             if(imageUrl !== post.imageUrl) {
                 clearImage(post.imageUrl)
             }
@@ -123,12 +139,25 @@ exports.deletePost = (req,res,next) => {
             if(!post) {
                 statusHandler.error(404, 'Could not find post.')
             }
+
+            if(post.creator.toString() !== req.userId) {
+                statusHandler.error(403, 'Not authorized')
+            }   
+
             clearImage(post.imageUrl)
             return Post.findByIdAndDelete(postId)
         })
+        .then(result => {
+            return User.findById(req.userId)
+        })
+        .then(user => {
+            user.posts.pull(postId)
+            return user.save()
+
+        })
         .then(() => {
             statusHandler.success(res, 200, { 
-                message: 'Post deleted!', 
+                message: 'Post deleted and cleared relations!', 
             })
         })
         .catch(err => statusHandler.error500(err, next))

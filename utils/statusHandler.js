@@ -1,10 +1,14 @@
-const error = (statusCode, message) => {
+const error = (statusCode, message, errors) => {
     const error = new Error(message)
     error.statusCode = statusCode
+    if(errors) {
+        error.data = errors.array()
+    }
     throw error
 }
 
 const error500 = (err, next) => {
+    console
     if(!err.statusCode) {
         err.statusCode = 500
     }
