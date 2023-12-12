@@ -69,6 +69,38 @@ exports.login = (req, res, next) => {
             })
         })
         .catch(err => statusHandler.error500(err, next))
+}
 
+exports.getUserStatus = (req, res, next) => {
+    User.findById(req.userId)
+        .then(user => {
+            if(!user) {
+                statusHandler.error(404, 'User not found!')
+            }
+            statusHandler.success(res, 200, { 
+                message: 'Status fetched successfully!', 
+                status: user.status,
+            })
+        })
+        .catch(err => statusHandler.error500(err, next))
+}
 
+exports.updateUserStatus = (req, res, next) => {
+    const status = req.body.status
+    User.findById(req.userId)
+        .then(user => {
+            if(!user) {
+                statusHandler.error(404, 'User not found!')
+            }
+
+            user.status = status
+            return user.save()
+        })
+        .then(() => {
+            statusHandler.success(res, 200, { 
+                message: 'Status changed successfully!', 
+                status: status,
+            })
+        })
+        .catch(err => statusHandler.error500(err, next))
 }
