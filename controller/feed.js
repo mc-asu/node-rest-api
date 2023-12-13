@@ -162,6 +162,11 @@ exports.deletePost = async (req,res,next) => {
         user.posts.pull(postId)
         await user.save()
 
+        io.getIO().emit('postsEvent', {
+            action: 'delete',
+            post: postId
+        })
+
         statusHandler.success(res, 200, { 
             message: 'Post deleted and cleared relations!', 
         })
