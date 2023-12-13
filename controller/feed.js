@@ -3,6 +3,7 @@ const statusHandler = require('../utils/statusHandler')
 const fs = require('fs')
 const path = require('path')
 
+const io = require('../socket')
 const Post = require('../models/post')
 const User = require('../models/user')
 const PER_PAGE = 2
@@ -50,6 +51,18 @@ exports.createPost = async (req, res, next) => {
         user.posts.push(post)
         await user.save()
 
+        //broadcast - message will be received by all users except sendee
+        //emit - message will be received by all users 
+        io.getIO().emit('postsEvent', {
+            action: 'create',
+            post: {
+                ...post._doc,
+                creator: {
+                    _id: req.userId,
+                    name: user.name
+                }
+            }
+        })
         statusHandler.success(res, 201, { 
             message: 'Post created successfully!', 
             post: post,
@@ -96,12 +109,14 @@ exports.updatePost = async (req, res, next) => {
         statusHandler.error(422, 'No file picked')
     }
     try {
-        const post = await Post.findById(postId)
+        const post = await Post
+            .findById(postId)
+            .populate('creator')
         if(!post) {
             statusHandler.error(404, 'Could not find post.')
         }
 
-        if(post.creator.toString() !== req.userId) {
+        if(post.creator._id.toString() !== req.userId) {
             statusHandler.error(403, 'Not authorized')
         }   
 
@@ -114,6 +129,10 @@ exports.updatePost = async (req, res, next) => {
 
         const result = await post.save()
 
+        io.getIO().emit('postsEvent', {
+            action: 'update',
+            post: result
+        })
         statusHandler.success(res, 200, { 
             message: 'Post edited!', 
             post: result,
