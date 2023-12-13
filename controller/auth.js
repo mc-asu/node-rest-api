@@ -6,101 +6,92 @@ const jwt = require('jsonwebtoken')
 
 const { validationResult } = require('express-validator')
 
-exports.signup = (req, res, next) => {
+exports.signup = async (req, res, next) => {
     const errors = validationResult(req)
     if(!errors.isEmpty()) {
         statusHandler.error(422, 'Validation failed, entered data is incorrect.', errors)
     }
 
     const { email, name, password } = req.body
-    bcrypt
-        .hash(password, 12)
-        .then(hashedPassword => {
-            const user = new User({
-                email: email,
-                password: hashedPassword,
-                name: name,
-            })
-            return user.save()
+
+    try {
+        const hashedPassword = await bcrypt.hash(password, 12)
+        const user = new User({
+            email: email,
+            password: hashedPassword,
+            name: name,
         })
-        .then(user => {
-            statusHandler.success(res, 201, { 
-                message: 'User created successfully!',
-                userId: user._id
-            })
+        const result = await user.save()
+
+        statusHandler.success(res, 201, { 
+            message: 'User created successfully!',
+            userId: result._id
         })
-        .catch(err => statusHandler.error500(err, next))
+    } catch(err) {
+        statusHandler.error500(err, next)
+    }
 }
 
-exports.login = (req, res, next) => {
-    // const errors = validationResult(req)
-    // if(!errors.isEmpty()) {
-    //     statusHandler.error(422, 'Validation failed, entered data is incorrect.', errors)
-    // }
+exports.login = async (req, res, next) => {
     const { email, password } = req.body
-    let loadedUser
-    User.findOne({email: email})
-        .then(user => {
-            if(!user) {
-                statusHandler.error(401, 'Could not find user with this email.')
-            }
-            loadedUser = user
-            return bcrypt.compare(password, user.password)      
-        })
-        .then(doMatch => {
-            if(!doMatch) {
-                statusHandler.error(401, 'Wrong password')
-            }
-            // Second parameter is only known by the server. 
-            // So please be careful who you trust
-            const token = jwt.sign(
-                {
-                    email: loadedUser.email,
-                    userId: loadedUser._id.toString()
-                }, 
-                'somesuperdupersecret',
-                { expiresIn: '1h'}
-            )
-
-            statusHandler.success(res, 200, { 
-                message: 'User logged in!', 
-                token: token,
+    try {
+        const loadedUser = await User.findOne({email: email})
+        if(!loadedUser) {
+            statusHandler.error(401, 'Could not find user with this email.')
+        }
+        const doMatch = await bcrypt.compare(password, loadedUser.password)
+        if (!doMatch){
+            statusHandler.error(401, 'Wrong password')
+        }   
+        const token = jwt.sign(
+            {
+                email: loadedUser.email,
                 userId: loadedUser._id.toString()
-            })
+            }, 
+            'somesuperdupersecret',
+            { expiresIn: '1h'}
+        )
+        statusHandler.success(res, 200, { 
+            message: 'User logged in!', 
+            token: token,
+            userId: loadedUser._id.toString()
         })
-        .catch(err => statusHandler.error500(err, next))
+    } catch (err) {
+        statusHandler.error500(err, next)
+    }
 }
 
-exports.getUserStatus = (req, res, next) => {
-    User.findById(req.userId)
-        .then(user => {
-            if(!user) {
-                statusHandler.error(404, 'User not found!')
-            }
-            statusHandler.success(res, 200, { 
-                message: 'Status fetched successfully!', 
-                status: user.status,
-            })
+exports.getUserStatus = async (req, res, next) => {
+    try {
+        const user = await User.findById(req.userId)
+        if(!user) {
+            statusHandler.error(404, 'User not found!')
+        }
+        statusHandler.success(res, 200, { 
+            message: 'Status fetched successfully!', 
+            status: user.status,
         })
-        .catch(err => statusHandler.error500(err, next))
+    } catch (err) {
+        statusHandler.error500(err, next)
+    }
 }
 
-exports.updateUserStatus = (req, res, next) => {
+exports.updateUserStatus = async (req, res, next) => {
     const status = req.body.status
-    User.findById(req.userId)
-        .then(user => {
-            if(!user) {
-                statusHandler.error(404, 'User not found!')
-            }
+    try {
+        const user = await User.findById(req.userId)
+        if(!user) {
+            statusHandler.error(404, 'User not found!')
+        }
+        user.status = status
+        await user.save()
 
-            user.status = status
-            return user.save()
+        statusHandler.success(res, 200, { 
+            message: 'Status changed successfully!', 
+            status: status,
         })
-        .then(() => {
-            statusHandler.success(res, 200, { 
-                message: 'Status changed successfully!', 
-                status: status,
-            })
-        })
-        .catch(err => statusHandler.error500(err, next))
+
+    } catch (err) {
+        statusHandler.error500(err, next)
+    }
 }
