@@ -134,6 +134,21 @@ module.exports = {
                 updatedAt: p.updatedAt.toISOString()
             }
         }), totalPosts: totalPosts}
+    },
+    getPost: async function({ id }, req) {
+        if (!req.isAuth) errorHandler(401, ' Not authenticated.')
+
+        const post = await Post.findById(id).populate('creator')
+        if(!post) {
+            errorHandler.error(404, 'Could not find post.')
+        }
+
+        return { 
+            ...post._doc,
+            _id: post._id.toString(),
+            createdAt: post.createdAt.toISOString(),
+            updatedAt: post.updatedAt.toISOString()
+        }
     }
 }
 

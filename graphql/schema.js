@@ -44,7 +44,8 @@ module.exports = buildSchema(`#graphql
 
     type RootQuery {
         login(email: String!, password: String!): AuthData! 
-        getPosts(page: Int!): PostData
+        getPosts(page: Int): PostData!
+        getPost(id: ID!): Post!
     }
 
     type RootMutation {
