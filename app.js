@@ -1,6 +1,6 @@
 const express = require('express')
 const path = require('path')
-const fs = require('fs')
+const { clearImage } = require('./utils/file')
 
 const bodyParser = require('body-parser')
 
@@ -19,6 +19,7 @@ const auth = require('./middleware/auth')
 const cors = require('cors')
 
 const app = express()
+
 
 const fileStorage = multer.diskStorage({
     destination: (req, file, cb) => {
@@ -107,8 +108,3 @@ mongoose.connect(MONGODB_URI)
     })
     .catch(err => console.log(err))
 
-    const clearImage = (filePath) => {
-        filePath = path.join(__dirname, '..', filePath)
-        fs.unlink(filePath, (err) => console.log(err))
-    }
-    

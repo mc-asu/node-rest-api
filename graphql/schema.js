@@ -19,6 +19,10 @@ module.exports = buildSchema(`#graphql
         status: String!
         posts: [Post!]!
     }
+
+    type UserStatus {
+        status: String!
+    }
  
     type AuthData {
         token: String!
@@ -46,11 +50,15 @@ module.exports = buildSchema(`#graphql
         login(email: String!, password: String!): AuthData! 
         getPosts(page: Int): PostData!
         getPost(id: ID!): Post!
+        user: User!
     }
 
     type RootMutation {
         createUser(userInput: UserInputData): User!
         createPost(postInput: PostInputData): Post!
+        updatePost(id: ID!, postInput: PostInputData): Post!
+        deletePost(id: ID!): Boolean
+        updateUserStatus(status: String!): User!
     }
 
     schema {

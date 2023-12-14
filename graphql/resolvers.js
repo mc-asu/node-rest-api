@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken')
 
 const User = require('../models/user')
 const Post  = require('../models/post')
+const { clearImage } = require('../utils/file')
 module.exports = {
     createUser: async function (args, req) {
         // args can be destructured to  { userInput } in this case
@@ -148,6 +149,102 @@ module.exports = {
             _id: post._id.toString(),
             createdAt: post.createdAt.toISOString(),
             updatedAt: post.updatedAt.toISOString()
+        }
+    },
+    updatePost: async function({id, postInput}, req) {
+        if (!req.isAuth) errorHandler(401, ' Not authenticated.')
+        const post = await Post
+            .findById(id)
+            .populate('creator')
+
+        if(!post) {
+            errorHandler.error(404, 'Could not find post.')
+        }
+
+        if(post.creator._id.toString() !== req.userId) {
+            errorHandler.error(403, 'Not authorized')
+        } 
+        const { title, content, imageUrl } = postInput
+        const errors = []
+        if ( 
+            validator.isEmpty(title)|| 
+            !validator.isLength(title, {min: 5})
+        ) {
+            errors.push({message: 'Title is too short.' })
+        }
+
+        if (
+            validator.isEmpty(content) || 
+            !validator.isLength(content, {min: 5})
+        ) {
+            errors.push({message: 'Content is invalid'})
+        }
+
+        if(errors.length > 0) {
+            errorHandler(422, 'Invalid inputs.', errors)
+        }
+
+        post.title = title
+        post.content = content
+        if(post.imageUrl !== undefined) {
+            post.imageUrl = imageUrl
+        }
+
+        const updatedPost = await post.save()
+
+        return {
+            ...updatedPost._doc,
+            _id: updatedPost._id.toString(),
+            createdAt: updatedPost.createdAt.toISOString(),
+            updatedAt: updatedPost.updatedAt.toISOString()
+        }   
+    },
+    deletePost: async function({id}, req) {
+        if (!req.isAuth) errorHandler(401, ' Not authenticated.')
+
+        const post = await Post.findById(id)
+        if(!post) {
+            errorHandler.error(404, 'Could not find post.')
+        }
+
+        // we don't populate so creator is the id
+        if(post.creator.toString() !== req.userId) {
+            errorHandler.error(403, 'Not authorized')
+        }
+        clearImage(post.imageUrl)
+        await Post.findByIdAndDelete(id)
+
+        const user = await User.findById(req.userId)
+        user.posts.pull(id)
+        await user.save()
+
+        return true
+    },
+    user: async function(args, req) {
+        if (!req.isAuth) errorHandler(401, ' Not authenticated.')
+
+        const user = await User.findById(req.userId)
+        if(!user) {
+            errorHandler.error(404, 'User not found!')
+        }
+        return { 
+            ...user._doc,
+            _id: user._id.toString()
+        }
+    },
+    updateUserStatus: async function ({status}, req) {
+        if (!req.isAuth) errorHandler(401, ' Not authenticated.')
+        const user = await User.findById(req.userId)
+        if(!user) {
+            errorHandler.error(404, 'User not found!')
+        }
+
+        user.status = status
+        await user.save()
+
+        return { 
+            ...user._doc,
+            _id: user._id.toString()
         }
     }
 }
