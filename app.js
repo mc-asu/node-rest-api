@@ -1,5 +1,6 @@
 const express = require('express')
 const path = require('path')
+const fs = require('fs')
 
 const bodyParser = require('body-parser')
 
@@ -13,6 +14,7 @@ const multer = require('multer')
 const { graphqlHTTP } = require('express-graphql')
 const graphqlSchema = require('./graphql/schema')
 const graphqlResolver = require('./graphql/resolvers')
+const auth = require('./middleware/auth')
 
 const cors = require('cors')
 
@@ -37,9 +39,9 @@ const fileFilter = (req, file, cb) => {
 
 // app.use(bodyParser.urlencoded()) // x-www-folr-urlencoded <form>
 app.options('*',cors())
+app.use(cors());
 
 app.use(bodyParser.json()) // application/json
-
 // iamge handler
 app.use(multer({ storage: fileStorage, fileFilter: fileFilter}).single('image'))
 app.use(express.static(path.join(__dirname, 'public')))
@@ -55,7 +57,19 @@ app.use((req, res, next) => {
     }
     next()
 })
-
+app.put('/post-image', (req, res, next) => {
+    if(!req.file) {
+        return res.status(200).json({ message: 'No file provided!'})
+    }
+    if(req.body.oldPath) {
+        clearImage(req.body.oldPath)
+    }
+    return res.status(201).json({
+        message: 'File stores',
+        filePath: req.file.path
+    })
+})
+app.use(auth)
 app.use('/graphql', graphqlHTTP({
     schema: graphqlSchema,
     rootValue: graphqlResolver,
@@ -87,3 +101,9 @@ mongoose.connect(MONGODB_URI)
         app.listen(8080)
     })
     .catch(err => console.log(err))
+
+    const clearImage = (filePath) => {
+        filePath = path.join(__dirname, '..', filePath)
+        fs.unlink(filePath, (err) => console.log(err))
+    }
+    

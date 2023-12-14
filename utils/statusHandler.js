@@ -8,7 +8,6 @@ const error = (statusCode, message, errors) => {
 }
 
 const error500 = (err, next) => {
-    console
     if(!err.statusCode) {
         err.statusCode = 500
     }
