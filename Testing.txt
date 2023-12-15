@@ -1,0 +1,26 @@
+npm i --save-dev mocha chai
+
+mocha is inserted in the scripts and expects a "test" folder
+  "scripts": {
+    "test": "mocha",
+    "start": "nodemon app.js"
+  },
+
+chai is imported in the "test".js file
+
+const expect = require('chai').expect
+const should = require('chai').should()
+const assert = require('chai').assert
+
+In this project, we will use the expect interface
+
+Testing code with DB functions: see auth-controller 
+Strategy 1: stub or mock the parts that rely on DB access
+Strategy 2: create a Test DB - very realistic environment
+
+// Runs multiple times before every "it"
+beforeEach(function() {})
+// Runs multiple times before after "it"
+afterEach(function() {})
+
+Splitting large functions is good for testing - makes it easier

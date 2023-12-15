@@ -30,6 +30,7 @@ exports.signup = async (req, res, next) => {
     } catch(err) {
         statusHandler.error500(err, next)
     }
+
 }
 
 exports.login = async (req, res, next) => {
@@ -53,12 +54,15 @@ exports.login = async (req, res, next) => {
         )
         statusHandler.success(res, 200, { 
             message: 'User logged in!', 
-            token: token,
-            userId: loadedUser._id.toString()
+            token: token, 
+            userId: loadedUser._id.toString() 
         })
+        return
     } catch (err) {
         statusHandler.error500(err, next)
+        return err
     }
+
 }
 
 exports.getUserStatus = async (req, res, next) => {
