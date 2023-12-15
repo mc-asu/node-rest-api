@@ -49,7 +49,7 @@ exports.createPost = async (req, res, next) => {
         await post.save()
         const user = await User.findById(req.userId)
         user.posts.push(post)
-        await user.save()
+        const savedUser = await user.save()
 
         statusHandler.success(res, 201, { 
             message: 'Post created successfully!', 
@@ -59,6 +59,7 @@ exports.createPost = async (req, res, next) => {
                 name: user.name
             }
         })
+        return savedUser
     } catch (err) {
         statusHandler.error500(err, next)
     }
